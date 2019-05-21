@@ -1,2 +1,71 @@
 ---
 # tasks file for tomcat
+  - name: updating the apt packages
+    apt:
+      update_cache: yes
+  - name: installing java
+    apt:
+      name: default-jdk
+      state: present
+  - name: creating tomcat group
+    group:
+      name: "{{ group }}"
+      state: present
+  - name: creating tomcat user and adding to tomcat group
+    user:
+      name: "{{ username }}"
+      group: tomcat
+      shell: /bin/false
+      home: "{{ home_dir }}"
+      move_home: yes
+  - name: create tomcat home directory
+    file:
+      path: "{{ home_dir }}"
+      state: directory
+      recurse: yes
+      owner: "{{ username }}"
+      group: "{{ group }}"
+  - name: download tomcat and extract 
+    unarchive:
+      src: https://www-us.apache.org/dist/tomcat/tomcat-8/v8.5.41/bin/apache-tomcat-8.5.41.tar.gz
+      dest: "{{ home_dir }}"
+      remote_src: yes
+      extra_opts:
+      - --strip-components=1
+    run_once: true
+  - name: changing the ownership to tomcat directory
+    file:
+      path: "{{ home_dir }}"
+      owner: "{{ username }}"
+      group: "{{ group }}"
+      mode: '0777'
+      recurse: yes
+  - name: configuring systemd service file
+    copy:
+      src: ./tomcat.service
+      dest: /etc/systemd/system/tomcat.service
+  - name: restarting the deamon services
+    systemd:
+      state: started
+      enabled: yes
+      daemon_reload: yes
+      name: tomcat
+  - name: Configure Tomcat Web Management Interface
+    copy:
+      src: ./tomcat-users.xml
+      dest: "{{home_dir}}/conf/tomcat-users.xml"
+  - name: allowing users any users
+    copy:
+      src: ./context.xml
+      dest: "{{home_dir}}/webapps/manager/META-INF/context.xml"
+  - name: allwoing second user file
+    copy:
+      src: ./context.xml
+      dest: "{{home_dir}}/webapps/host-manager/META-INF/context.xml"
+  - name: Download jenkins war file
+    get_url:
+      url: http://ftp-nyc.osuosl.org/pub/jenkins/war-stable/2.164.3/jenkins.war
+      dest: "{{home_dir}}/webapps/"
+    run_once: true
+    notify: 
+    - restart tomcat

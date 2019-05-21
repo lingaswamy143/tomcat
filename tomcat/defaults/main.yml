@@ -1,2 +1,5 @@
 ---
 # defaults file for tomcat
+username: tomcat
+group: tomcat
+home_dir: /opt/tomcat
